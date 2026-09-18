@@ -1,12 +1,21 @@
 # Spring Table
 
 A fibre-first meal planner for lunches, dinners, and a school lunchbox, built
-around New Zealand seasonal produce. See `spring-table-spec.md` for the full
-specification.
+around New Zealand seasonal produce. See `spring-table-spec.md` for the
+original specification (the app has since evolved beyond it).
 
-The app is a single static file (`index.html`) with no build step and no
-backend. All state (the weekly plan and the lunchbox contents) lives in the
-browser's `localStorage`, per device.
+A small static site, no build step and no backend:
+
+- `index.html` — home page: browse recipes and school lunch items, add them
+  to the weekly planner, and see the resulting shopping list.
+- `info.html` — the eating principles and seasonal NZ produce reference,
+  linked from the home page.
+- `data.js` — shared recipe, principle, and seasonal-produce data.
+- `styles.css` — shared styles for both pages.
+
+The weekly plan lives in the browser's `localStorage` (key
+`springtable_plan`), per device. The groceries tab and shopping list are
+derived from it on the fly, not stored separately.
 
 ## Run it locally
 

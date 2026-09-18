@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Principles &amp; seasonal produce — Spring Table</title>
+<meta name="description" content="The eating principles behind Spring Table, and what's in season in New Zealand right now.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle colour theme">Theme: Auto</button>
+    <a class="back-link" href="index.html">&larr; Back to Spring Table</a>
+    <h1>Principles &amp; what's in season</h1>
+    <p class="tagline">The whole-food, high-fibre thinking behind Spring Table, and a browsable guide to New Zealand seasonal produce.</p>
+    <div class="stats" id="statsRow"></div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section>
+    <h2>Eating principles</h2>
+    <ol class="principle-list" id="principleList"></ol>
+    <div class="callout">The shortcut: stay out of the packaged aisle and most of this looks after itself.</div>
+  </section>
+
+  <section style="margin-top: 40px;">
+    <h2>Seasonal NZ produce</h2>
+    <div class="pillrow" id="seasonPicker"></div>
+    <div id="seasonalContent"></div>
+  </section>
+
+</main>
+
+<script src="data.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  initThemeToggle(document.getElementById("themeToggle"));
+
+  var currentSeason = getCurrentSeason();
+
+  /* ---------- stats ---------- */
+
+  document.getElementById("statsRow").innerHTML = stats.map(function (s) {
+    return '<div class="stat"><span class="num">' + s.num + '</span><span class="label">' + s.label + '</span></div>';
+  }).join("");
+
+  /* ---------- principles ---------- */
+
+  var principleList = document.getElementById("principleList");
+  principleList.innerHTML = principles.map(function (p, i) {
+    var num = String(i + 1).padStart(2, "0");
+    return '<li><span class="pnum">' + num + '</span><span><span class="ptitle">' + p[0] + '</span> — ' + p[1] + '</span></li>';
+  }).join("");
+
+  /* ---------- seasonal produce ---------- */
+
+  var selectedSeason = currentSeason;
+  var seasonPicker = document.getElementById("seasonPicker");
+  var seasonalContent = document.getElementById("seasonalContent");
+
+  function renderSeasonPicker() {
+    seasonPicker.innerHTML = seasons.map(function (s) {
+      var label = s + (s === currentSeason ? " · now" : "");
+      return '<button class="pill" data-season="' + s + '" aria-pressed="' + (s === selectedSeason) + '">' + label + '</button>';
+    }).join("");
+  }
+  function renderSeasonalContent() {
+    var data = seasonalProduce[selectedSeason];
+    seasonalContent.innerHTML = ["Vegetables", "Fruit", "Herbs"].map(function (group) {
+      return '<h3 class="groupname">' + group + '</h3><div class="pillrow">' +
+        data[group].map(function (item) { return '<span class="pill static">' + item + '</span>'; }).join("") +
+        '</div>';
+    }).join("");
+  }
+  seasonPicker.addEventListener("click", function (e) {
+    var btn = e.target.closest("button[data-season]");
+    if (!btn) return;
+    selectedSeason = btn.dataset.season;
+    renderSeasonPicker();
+    renderSeasonalContent();
+  });
+  renderSeasonPicker();
+  renderSeasonalContent();
+})();
+</script>
+</body>
+</html>
