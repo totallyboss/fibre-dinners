@@ -171,6 +171,32 @@
   table.planner textarea:focus { outline: 2px solid var(--fern); border-radius: 3px; }
   .planner-status { min-height: 1.2em; color: var(--fern-deep); font-size: .88rem; margin-top: 10px; }
 
+  /* Day picker modal */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(20,17,10,.45);
+    align-items: center; justify-content: center; z-index: 40; padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 10px;
+    padding: 22px; max-width: 420px; width: 100%; max-height: 85vh; overflow-y: auto;
+  }
+  .modal h3 { margin: 0 0 4px; font-size: 1.1rem; }
+  .modal .modal-hint { color: var(--ink-soft); font-size: .85rem; margin: 0 0 16px; }
+  .modal .pill.day-occupied { border-style: dashed; }
+  .modal .pill.day-occupied::after { content: " •"; color: var(--mustard); }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+
+  /* Groceries */
+  table.groceries { border-collapse: collapse; width: 100%; }
+  table.groceries th, table.groceries td { border: 1px solid var(--line); padding: 10px; text-align: left; vertical-align: top; }
+  table.groceries th { background: var(--paper-2); font-size: .85rem; }
+  table.groceries td.qty { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  table.groceries .used-in { list-style: none; margin: 0; padding: 0; font-size: .85rem; color: var(--ink-soft); }
+  table.groceries .used-in li { margin-bottom: 2px; }
+  .groceries-empty { color: var(--ink-soft); font-style: italic; }
+  .groceries-note { margin-top: 16px; font-size: .85rem; color: var(--ink-soft); }
+
   #toast {
     position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
     background: var(--ink); color: var(--paper); padding: 10px 18px; border-radius: 6px;
@@ -207,6 +233,7 @@
     <button role="tab" data-tab="ideas" aria-selected="false">Lunch &amp; dinner ideas</button>
     <button role="tab" data-tab="lunchbox" aria-selected="false">School lunchbox</button>
     <button role="tab" data-tab="planner" aria-selected="false">Weekly planner</button>
+    <button role="tab" data-tab="groceries" aria-selected="false">Groceries</button>
   </div>
 </nav>
 
@@ -259,9 +286,29 @@
     <p class="planner-status" id="plannerStatus" role="status" aria-live="polite"></p>
   </section>
 
+  <section id="tab-groceries" class="panel" role="tabpanel">
+    <p class="modal-hint">Built automatically from every recipe in this week's planner. Matching ingredients are combined and show which recipe (and day) they're needed for.</p>
+    <div id="groceriesContent"></div>
+  </section>
+
 </main>
 
 <div id="toast" role="status" aria-live="polite"></div>
+
+<div class="modal-overlay" id="dayPickerOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="dayPickerTitle">
+    <h3 id="dayPickerTitle">Add to planner</h3>
+    <p class="modal-hint" id="dayPickerHint"></p>
+    <div class="filter-label">Meal</div>
+    <div class="pillrow" id="mealPicker"></div>
+    <div class="filter-label">Day</div>
+    <div class="pillrow" id="dayPickerDays"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" id="dayPickerCancel" type="button">Cancel</button>
+      <button class="btn" id="dayPickerConfirm" type="button" disabled>Add</button>
+    </div>
+  </div>
+</div>
 
 <script>
 (function () {
@@ -331,7 +378,7 @@
       ingredients: ["2 cans butter beans, drained", "400g tin tomatoes", "1 onion, sliced", "2 cloves garlic", "1 tsp oregano", "feta, crumbled"],
       steps: ["Combine beans, tomatoes, onion, garlic and oregano in a baking dish.", "Bake at 200°C for 30 minutes.", "Scatter feta over the top before serving.", "Serve with crusty bread."] },
     { cat: "Beans & lentils", season: "Any", title: "Three-bean chilli", desc: "A hearty chilli that works from any pantry shelf.",
-      ingredients: ["1 can each kidney, black and cannellini beans", "1 onion, diced", "2 tbsp chilli powder", "400g tin tomatoes", "1 capsicum, diced"],
+      ingredients: ["1 can kidney beans, drained", "1 can black beans, drained", "1 can cannellini beans, drained", "1 onion, diced", "2 tbsp chilli powder", "400g tin tomatoes", "1 capsicum, diced"],
       steps: ["Fry onion and capsicum until soft.", "Stir in chilli powder, tomatoes and beans.", "Simmer 20 minutes, stirring occasionally.", "Serve with rice or in a wrap."] },
     { cat: "Beans & lentils", season: "Summer", title: "Moroccan chickpea & apricot stew", desc: "A warmly spiced stew balancing chickpeas and dried apricot.",
       ingredients: ["2 cans chickpeas, drained", "1/2 cup dried apricots, chopped", "1 onion, diced", "1 tbsp ras el hanout", "400g tin tomatoes", "handful coriander"],
@@ -478,6 +525,8 @@
       steps: ["Arrange beetroot and orange segments on a plate.", "Scatter with walnuts and soft cheese.", "Drizzle with olive oil.", "Serve at room temperature."] }
   ];
   recipes.forEach(function (r, i) { r.id = i; });
+  var recipesByTitle = {};
+  recipes.forEach(function (r) { recipesByTitle[r.title] = r; });
 
   var lunchboxGroups = [
     { name: "Whole grain base", items: ["Seeded sourdough sandwich", "Wholegrain wrap", "Leftover quinoa", "Bulgur salad", "Oat crackers"] },
@@ -785,6 +834,7 @@
     if (!ta) return;
     plan[ta.dataset.key] = ta.value;
     savePlan();
+    renderGroceries();
     setPlannerStatus("Saved");
   });
 
@@ -801,6 +851,7 @@
     });
     savePlan();
     renderPlanner();
+    renderGroceries();
     setPlannerStatus(filled > 0 ? "Filled " + filled + " empty dinner" + (filled === 1 ? "" : "s") + "." : "No empty dinner slots to fill.");
   });
 
@@ -809,24 +860,244 @@
     plan = {};
     savePlan();
     renderPlanner();
+    renderGroceries();
     setPlannerStatus("Week cleared.");
   });
 
+  /* ---------- add-to-planner day/meal picker ---------- */
+
+  var mealOptions = [["dinner", "Dinner"], ["kidlunch", "Kid's lunch"]];
+  var dayPickerOverlay = document.getElementById("dayPickerOverlay");
+  var dayPickerTitle = document.getElementById("dayPickerTitle");
+  var dayPickerHint = document.getElementById("dayPickerHint");
+  var mealPicker = document.getElementById("mealPicker");
+  var dayPickerDays = document.getElementById("dayPickerDays");
+  var dayPickerConfirm = document.getElementById("dayPickerConfirm");
+  var dayPickerCancel = document.getElementById("dayPickerCancel");
+
+  var pendingRecipeTitle = null;
+  var pickerMeal = "dinner";
+  var pickerDay = null;
+
+  function renderMealPicker() {
+    mealPicker.innerHTML = mealOptions.map(function (m) {
+      return '<button class="pill" type="button" data-meal="' + m[0] + '" aria-pressed="' + (m[0] === pickerMeal) + '">' + m[1] + '</button>';
+    }).join("");
+  }
+  function renderDayPickerDays() {
+    dayPickerDays.innerHTML = days.map(function (d) {
+      var existing = plan[pickerMeal + "_" + d];
+      var occupied = !!existing;
+      var label = dayNames[d] + (occupied ? " (has: " + existing.slice(0, 24) + (existing.length > 24 ? "…" : "") + ")" : "");
+      return '<button class="pill' + (occupied ? " day-occupied" : "") + '" type="button" data-day="' + d + '" aria-pressed="' + (d === pickerDay) + '" title="' + label.replace(/"/g, "&quot;") + '">' + dayNames[d] + '</button>';
+    }).join("");
+  }
+  function openDayPicker(title) {
+    pendingRecipeTitle = title;
+    pickerMeal = "dinner";
+    pickerDay = null;
+    dayPickerTitle.textContent = 'Add "' + title + '" to the planner';
+    dayPickerHint.textContent = "Choose a meal and a day. Days marked • already have something planned.";
+    renderMealPicker();
+    renderDayPickerDays();
+    dayPickerConfirm.disabled = true;
+    dayPickerOverlay.classList.add("open");
+  }
+  function closeDayPicker() {
+    dayPickerOverlay.classList.remove("open");
+    pendingRecipeTitle = null;
+    pickerDay = null;
+  }
+  mealPicker.addEventListener("click", function (e) {
+    var btn = e.target.closest("button[data-meal]");
+    if (!btn) return;
+    pickerMeal = btn.dataset.meal;
+    pickerDay = null;
+    dayPickerConfirm.disabled = true;
+    renderMealPicker();
+    renderDayPickerDays();
+  });
+  dayPickerDays.addEventListener("click", function (e) {
+    var btn = e.target.closest("button[data-day]");
+    if (!btn) return;
+    pickerDay = btn.dataset.day;
+    dayPickerConfirm.disabled = false;
+    renderDayPickerDays();
+  });
+  dayPickerCancel.addEventListener("click", closeDayPicker);
+  dayPickerOverlay.addEventListener("click", function (e) {
+    if (e.target === dayPickerOverlay) closeDayPicker();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && dayPickerOverlay.classList.contains("open")) closeDayPicker();
+  });
+  dayPickerConfirm.addEventListener("click", function () {
+    if (!pendingRecipeTitle || !pickerDay) return;
+    var key = pickerMeal + "_" + pickerDay;
+    var mealLabel = mealOptions.filter(function (m) { return m[0] === pickerMeal; })[0][1];
+    if (plan[key] && !window.confirm("Replace what's already in " + dayNames[pickerDay] + "'s " + mealLabel.toLowerCase() + "?")) return;
+    plan[key] = pendingRecipeTitle;
+    savePlan();
+    renderPlanner();
+    renderGroceries();
+    showToast("Added to " + dayNames[pickerDay] + "'s " + mealLabel.toLowerCase() + ".");
+    closeDayPicker();
+  });
+
   function addRecipeToPlanner(title) {
-    for (var i = 0; i < days.length; i++) {
-      var key = "dinner_" + days[i];
-      if (!plan[key]) {
-        plan[key] = title;
-        savePlan();
-        renderPlanner();
-        showToast("Added to " + dayNames[days[i]] + "'s dinner.");
-        return;
+    openDayPicker(title);
+  }
+
+  /* ---------- groceries ---------- */
+
+  var UNIT_MAP = {
+    cup: "cup", cups: "cup",
+    tbsp: "tbsp", tablespoon: "tbsp", tablespoons: "tbsp",
+    tsp: "tsp", teaspoon: "tsp", teaspoons: "tsp",
+    g: "g", gram: "g", grams: "g",
+    kg: "kg", ml: "ml",
+    l: "L", litre: "L", litres: "L",
+    can: "can", cans: "can",
+    tin: "tin", tins: "tin",
+    clove: "clove", cloves: "clove",
+    bunch: "bunch", bunches: "bunch",
+    handful: "handful", handfuls: "handful",
+    cob: "cob", cobs: "cob",
+    slice: "slice", slices: "slice",
+    fillet: "fillet", fillets: "fillet",
+    block: "block", pinch: "pinch"
+  };
+  var IMPLICIT_QTY_UNITS = ["can", "tin", "bunch", "handful", "clove", "block", "pinch"];
+
+  function parseQtyToken(tok) {
+    var frac = tok.match(/^(\d+)\/(\d+)$/);
+    if (frac) return parseInt(frac[1], 10) / parseInt(frac[2], 10);
+    if (/^\d+(\.\d+)?$/.test(tok)) return parseFloat(tok);
+    return null;
+  }
+
+  var ATTACHED_UNIT_MAP = { g: "g", kg: "kg", ml: "ml", l: "L" };
+
+  function parseIngredient(raw) {
+    var commaIdx = raw.indexOf(",");
+    var main = commaIdx >= 0 ? raw.slice(0, commaIdx).trim() : raw.trim();
+    var words = main.split(/\s+/);
+
+    var qty = null, fusedQty = null, fusedUnit = null;
+    var headMatch = (words[0] || "").match(/^(\d+\/\d+|\d+(?:\.\d+)?)([a-zA-Z]*)$/);
+    if (headMatch) {
+      var numVal = parseQtyToken(headMatch[1]);
+      var attachedLetters = headMatch[2] ? headMatch[2].toLowerCase() : "";
+      words = words.slice(1);
+      if (attachedLetters === "") {
+        qty = numVal; // plain leading count, e.g. "2 cans", "6 eggs"
+      } else {
+        fusedQty = numVal; // number fused to a unit, e.g. "400g"
+        fusedUnit = ATTACHED_UNIT_MAP[attachedLetters] || null;
       }
     }
-    showToast("This week's dinners are already full.");
+
+    var wordUnit = null;
+    if (words.length > 0) {
+      var w0 = words[0].toLowerCase().replace(/[^a-z]/g, "");
+      if (UNIT_MAP[w0]) { wordUnit = UNIT_MAP[w0]; words = words.slice(1); }
+    }
+
+    var unit;
+    if (wordUnit) {
+      unit = wordUnit;
+      if (qty === null && IMPLICIT_QTY_UNITS.indexOf(unit) !== -1) qty = 1;
+    } else if (fusedUnit) {
+      unit = fusedUnit;
+      qty = fusedQty;
+    } else {
+      unit = null;
+    }
+
+    var item = words.join(" ").trim();
+    if (!item) item = main;
+    return { qty: qty, unit: unit, item: item, key: item.toLowerCase() };
+  }
+
+  function formatQty(n) {
+    var whole = Math.floor(n);
+    var frac = n - whole;
+    var fracLabel = "";
+    if (Math.abs(frac - 0.5) < 0.01) fracLabel = "½";
+    else if (Math.abs(frac - 0.25) < 0.01) fracLabel = "¼";
+    else if (Math.abs(frac - 0.75) < 0.01) fracLabel = "¾";
+    else if (Math.abs(frac - 1 / 3) < 0.02) fracLabel = "⅓";
+    else if (Math.abs(frac - 2 / 3) < 0.02) fracLabel = "⅔";
+    if (fracLabel) return (whole > 0 ? whole + " " : "") + fracLabel;
+    return String(Math.round(n * 100) / 100);
+  }
+
+  function plannerOccurrences() {
+    var out = [];
+    mealOptions.forEach(function (m) {
+      days.forEach(function (d) {
+        var value = plan[m[0] + "_" + d];
+        if (value) out.push({ title: value, meal: m[1], day: d });
+      });
+    });
+    return out;
+  }
+
+  function renderGroceries() {
+    var container = document.getElementById("groceriesContent");
+    var occurrences = plannerOccurrences();
+    var groups = {};
+    var unrecognized = [];
+
+    occurrences.forEach(function (occ) {
+      var recipe = recipesByTitle[occ.title];
+      if (!recipe) { unrecognized.push(occ); return; }
+      recipe.ingredients.forEach(function (ing) {
+        var p = parseIngredient(ing);
+        var groupKey = p.key + "|" + (p.unit || "");
+        if (!groups[groupKey]) groups[groupKey] = { item: p.item, unit: p.unit, qty: 0, hasQty: false, entries: [] };
+        var g = groups[groupKey];
+        if (p.qty !== null) { g.qty += p.qty; g.hasQty = true; }
+        g.entries.push({ title: recipe.title, day: occ.day, meal: occ.meal, qty: p.qty, unit: p.unit });
+      });
+    });
+
+    var keys = Object.keys(groups).sort(function (a, b) { return groups[a].item.localeCompare(groups[b].item); });
+
+    if (keys.length === 0) {
+      container.innerHTML = '<p class="groceries-empty">Nothing in the planner yet — add recipes from the idea bank and they’ll show up here as a shopping list.</p>';
+      return;
+    }
+
+    var PLURAL_UNITS = ["cup", "can", "tin", "clove", "bunch", "handful", "cob", "slice", "fillet", "block"];
+    function unitLabel(unit, qty) {
+      if (!unit) return "";
+      var plural = qty !== 1 && PLURAL_UNITS.indexOf(unit) !== -1;
+      return " " + unit + (plural ? "s" : "");
+    }
+
+    var rows = keys.map(function (k) {
+      var g = groups[k];
+      var qtyText = g.hasQty ? formatQty(g.qty) + unitLabel(g.unit, g.qty) : "as needed";
+      var usedIn = g.entries.map(function (e) {
+        var amount = e.qty !== null ? " (" + formatQty(e.qty) + unitLabel(e.unit, e.qty) + ")" : "";
+        return "<li>" + e.title + " — " + dayNames[e.day] + " " + e.meal.toLowerCase() + amount + "</li>";
+      }).join("");
+      return "<tr><td>" + g.item + "</td><td class=\"qty\">" + qtyText + "</td><td><ul class=\"used-in\">" + usedIn + "</ul></td></tr>";
+    }).join("");
+
+    var html = '<table class="groceries"><thead><tr><th scope="col">Ingredient</th><th scope="col">Quantity</th><th scope="col">Used in</th></tr></thead><tbody>' + rows + '</tbody></table>';
+
+    if (unrecognized.length > 0) {
+      html += '<p class="groceries-note">Not included above (typed directly into the planner, not from the idea bank): ' +
+        unrecognized.map(function (u) { return u.title + " (" + dayNames[u.day] + " " + u.meal.toLowerCase() + ")"; }).join(", ") + ".</p>";
+    }
+
+    container.innerHTML = html;
   }
 
   renderPlanner();
+  renderGroceries();
 })();
 </script>
 </body>
