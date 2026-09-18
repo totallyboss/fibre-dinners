@@ -1,0 +1,833 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spring Table</title>
+<meta name="description" content="A fibre-first meal planner for lunches, dinners, and a school lunchbox, built around New Zealand seasonal produce.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F5F1E4;
+    --paper-2: #EDE7D6;
+    --ink: #262117;
+    --ink-soft: #5A5344;
+    --fern: #3E5B3E;
+    --fern-deep: #2C4230;
+    --mustard: #C6871F;
+    --plum: #6E2F4C;
+    --plum-soft: #F0DDE6;
+    --line: rgba(38,33,23,.15);
+    --card: #FBF9F1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #1B1A15;
+      --paper-2: #262319;
+      --ink: #EDE8DA;
+      --ink-soft: #B8AF9C;
+      --fern: #7CB07C;
+      --fern-deep: #9CCB9C;
+      --mustard: #E2A94A;
+      --plum: #D98BB0;
+      --plum-soft: #3A2530;
+      --line: rgba(237,232,218,.18);
+      --card: #221F18;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #1B1A15; --paper-2: #262319; --ink: #EDE8DA; --ink-soft: #B8AF9C;
+    --fern: #7CB07C; --fern-deep: #9CCB9C; --mustard: #E2A94A; --plum: #D98BB0;
+    --plum-soft: #3A2530; --line: rgba(237,232,218,.18); --card: #221F18;
+  }
+  :root[data-theme="light"] {
+    --paper: #F5F1E4; --paper-2: #EDE7D6; --ink: #262117; --ink-soft: #5A5344;
+    --fern: #3E5B3E; --fern-deep: #2C4230; --mustard: #C6871F; --plum: #6E2F4C;
+    --plum-soft: #F0DDE6; --line: rgba(38,33,23,.15); --card: #FBF9F1;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: light dark; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Public Sans", system-ui, sans-serif;
+    line-height: 1.55;
+  }
+  h1, h2, h3, .serif { font-family: "Fraunces", Georgia, serif; }
+  a { color: var(--fern-deep); }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 20px; }
+
+  .hero { background: var(--paper-2); border-bottom: 1px solid var(--line); padding: 32px 0 24px; position: relative; }
+  .hero h1 { font-style: italic; font-size: clamp(2rem, 5vw, 2.75rem); margin: 0 0 6px; }
+  .hero p.tagline { margin: 0 0 20px; color: var(--ink-soft); max-width: 60ch; }
+  .theme-toggle {
+    position: absolute; top: 20px; right: 20px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 999px;
+    padding: 6px 12px; font-size: .85rem; color: var(--ink); cursor: pointer;
+  }
+  .stats { display: flex; flex-wrap: wrap; gap: 20px; }
+  .stat { min-width: 130px; }
+  .stat .num { font-family: "Fraunces", serif; font-size: 1.6rem; color: var(--mustard); display: block; }
+  .stat .label { font-size: .82rem; color: var(--ink-soft); }
+
+  nav.tabs {
+    display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--line);
+    background: var(--paper); position: sticky; top: 0; z-index: 5;
+  }
+  nav.tabs .wrap { display: flex; gap: 4px; }
+  nav.tabs button {
+    flex: 0 0 auto; background: none; border: none; border-bottom: 3px solid transparent;
+    padding: 14px 14px 11px; font-size: .95rem; font-family: inherit; color: var(--ink-soft);
+    cursor: pointer; white-space: nowrap;
+  }
+  nav.tabs button[aria-selected="true"] { color: var(--fern-deep); border-bottom-color: var(--fern); font-weight: 600; }
+
+  main { padding: 28px 0 60px; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* Principles */
+  .principle-list { list-style: none; margin: 0; padding: 0; }
+  .principle-list li { display: flex; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .principle-list .pnum { font-family: "Fraunces", serif; color: var(--mustard); font-size: 1.1rem; min-width: 2ch; }
+  .principle-list .ptitle { font-weight: 700; }
+  .callout {
+    margin-top: 22px; padding: 16px 18px; background: var(--plum-soft); color: var(--ink);
+    border-radius: 6px; font-style: italic;
+  }
+
+  /* Pills */
+  .pillrow { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 18px; }
+  .pill {
+    border: 1px solid var(--line); background: var(--card); color: var(--ink);
+    border-radius: 999px; padding: 6px 13px; font-size: .85rem; cursor: pointer; font-family: inherit;
+  }
+  .pill[aria-pressed="true"] { background: var(--fern); border-color: var(--fern); color: #fff; }
+  .pill.tag-cat { background: var(--fern-deep); border-color: var(--fern-deep); color: #fff; cursor: default; font-size: .78rem; padding: 3px 10px; }
+  .pill.tag-season { background: var(--mustard); border-color: var(--mustard); color: #2a1c04; cursor: default; font-size: .78rem; padding: 3px 10px; }
+  .pill.static { cursor: default; }
+
+  h3.groupname { margin: 18px 0 6px; font-size: 1rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .04em; }
+
+  /* Ideas */
+  .filter-block { margin-bottom: 4px; }
+  .filter-label { font-size: .8rem; color: var(--ink-soft); margin: 10px 0 4px; }
+  .idea-count { color: var(--ink-soft); font-size: .9rem; margin: 4px 0 18px; }
+  .idea-card { border-top: 1px solid var(--line); }
+  .idea-card:last-child { border-bottom: 1px solid var(--line); }
+  .idea-header {
+    display: flex; align-items: center; gap: 14px; padding: 14px 0; cursor: pointer; background: none; border: none;
+    width: 100%; text-align: left; font-family: inherit; color: inherit;
+  }
+  .idea-header .idea-main { flex: 1; min-width: 0; }
+  .idea-header .idea-title { font-weight: 700; margin: 0 0 3px; }
+  .idea-header .idea-desc { color: var(--ink-soft); font-size: .92rem; margin: 0 0 6px; }
+  .idea-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chevron { transition: transform .15s ease; flex: 0 0 auto; background: none; border: none; font-size: 1.1rem; color: var(--ink-soft); cursor: pointer; }
+  .idea-card.expanded .chevron { transform: rotate(180deg); }
+  .idea-body { display: none; padding: 0 0 22px; }
+  .idea-card.expanded .idea-body { display: block; }
+  .idea-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .idea-cols h4 { margin: 0 0 8px; font-size: .85rem; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-soft); }
+  .idea-cols ul, .idea-cols ol { margin: 0; padding-left: 20px; }
+  .idea-cols li { margin-bottom: 4px; }
+  .btn {
+    display: inline-block; background: var(--fern); color: #fff; border: none; border-radius: 6px;
+    padding: 9px 16px; font-size: .9rem; font-family: inherit; cursor: pointer;
+  }
+  .btn.secondary { background: var(--card); color: var(--ink); border: 1px solid var(--line); }
+  .btn.plum { background: var(--plum); }
+  .add-planner-btn { margin-top: 14px; }
+
+  /* Lunchbox */
+  .lunchbox-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 32px; }
+  .box-list { list-style: none; margin: 0 0 14px; padding: 0; min-height: 40px; }
+  .box-list li {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 6px;
+    padding: 9px 12px; margin-bottom: 8px;
+  }
+  .box-list button.remove { background: none; border: none; color: var(--plum); font-size: 1rem; cursor: pointer; }
+  .box-empty { font-style: italic; color: var(--ink-soft); }
+  .box-actions { display: flex; gap: 10px; margin-bottom: 18px; }
+  .advisory {
+    background: var(--plum-soft); border-radius: 6px; padding: 12px 14px; font-size: .88rem; color: var(--ink); margin-top: 20px;
+  }
+
+  /* Planner */
+  .planner-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .planner-scroll { overflow-x: auto; }
+  table.planner { border-collapse: collapse; width: 100%; min-width: 720px; }
+  table.planner th, table.planner td { border: 1px solid var(--line); padding: 8px; vertical-align: top; }
+  table.planner th { background: var(--paper-2); font-weight: 600; font-size: .85rem; text-align: left; }
+  table.planner td.rowlabel { background: var(--paper-2); font-weight: 600; font-size: .85rem; white-space: nowrap; }
+  table.planner textarea {
+    width: 100%; min-height: 64px; resize: vertical; border: 1px solid transparent; background: transparent;
+    color: var(--ink); font-family: inherit; font-size: .88rem; padding: 4px;
+  }
+  table.planner textarea:focus { outline: 2px solid var(--fern); border-radius: 3px; }
+  .planner-status { min-height: 1.2em; color: var(--fern-deep); font-size: .88rem; margin-top: 10px; }
+
+  #toast {
+    position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
+    background: var(--ink); color: var(--paper); padding: 10px 18px; border-radius: 6px;
+    font-size: .88rem; opacity: 0; pointer-events: none; transition: opacity .2s ease; z-index: 50;
+  }
+  #toast.show { opacity: 1; }
+
+  @media (max-width: 640px) {
+    .idea-cols { grid-template-columns: 1fr; }
+    .lunchbox-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle colour theme">Theme: Auto</button>
+    <h1>Spring Table</h1>
+    <p class="tagline">A fibre-first plan for dinners, lunches, and one 9 year old's school lunchbox — built around what's actually in season in New Zealand.</p>
+    <div class="stats">
+      <div class="stat"><span class="num">30g+</span><span class="label">fibre minimum daily</span></div>
+      <div class="stat"><span class="num">55g</span><span class="label">protective target</span></div>
+      <div class="stat"><span class="num">4–5×</span><span class="label">beans/lentils per week</span></div>
+      <div class="stat"><span class="num">30+</span><span class="label">different plants per week</span></div>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Sections">
+  <div class="wrap">
+    <button role="tab" data-tab="principles" aria-selected="true">Principles</button>
+    <button role="tab" data-tab="seasonal" aria-selected="false">Seasonal NZ produce</button>
+    <button role="tab" data-tab="ideas" aria-selected="false">Lunch &amp; dinner ideas</button>
+    <button role="tab" data-tab="lunchbox" aria-selected="false">School lunchbox</button>
+    <button role="tab" data-tab="planner" aria-selected="false">Weekly planner</button>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <section id="tab-principles" class="panel active" role="tabpanel">
+    <ol class="principle-list" id="principleList"></ol>
+    <div class="callout">The shortcut: stay out of the packaged aisle and most of this looks after itself.</div>
+  </section>
+
+  <section id="tab-seasonal" class="panel" role="tabpanel">
+    <div class="pillrow" id="seasonPicker"></div>
+    <div id="seasonalContent"></div>
+  </section>
+
+  <section id="tab-ideas" class="panel" role="tabpanel">
+    <div class="filter-block">
+      <div class="filter-label">Category</div>
+      <div class="pillrow" id="catFilter"></div>
+      <div class="filter-label">Season</div>
+      <div class="pillrow" id="seasonFilter"></div>
+    </div>
+    <p class="idea-count" id="ideaCount"></p>
+    <div id="ideaList"></div>
+  </section>
+
+  <section id="tab-lunchbox" class="panel" role="tabpanel">
+    <div class="lunchbox-grid">
+      <div>
+        <h2>Today's box</h2>
+        <ul class="box-list" id="boxList"></ul>
+        <div class="box-actions">
+          <button class="btn secondary" id="clearBoxBtn" type="button">Clear box</button>
+          <button class="btn" id="surpriseBtn" type="button">Surprise me</button>
+        </div>
+        <div class="advisory">Most NZ primary schools ask for nut-free lunchboxes. The list on the right favours seeds over nuts — swap in nut butters only if your school allows them.</div>
+      </div>
+      <div id="componentPicker"></div>
+    </div>
+  </section>
+
+  <section id="tab-planner" class="panel" role="tabpanel">
+    <div class="planner-actions">
+      <button class="btn" id="fillDinnersBtn" type="button">Fill empty dinners from idea bank</button>
+      <button class="btn plum" id="clearWeekBtn" type="button">Clear week</button>
+    </div>
+    <div class="planner-scroll">
+      <table class="planner" id="plannerTable"></table>
+    </div>
+    <p class="planner-status" id="plannerStatus" role="status" aria-live="polite"></p>
+  </section>
+
+</main>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- data ---------- */
+
+  var principles = [
+    ["Eat real fibre, not powder", "Isolated fibre supplements can't replicate the hundreds of fibre types whole food provides."],
+    ["Build every plate around whole plants", "Vegetables, whole grains, fruit, nuts, seeds, fermented foods at the centre of the plate."],
+    ["Beans and lentils, most days", "Four or five times a week, for the gut bacteria that produce butyrate."],
+    ["Whole grains over refined", "Sourdough/seeded bread and quinoa/bulgur over white bread and white rice."],
+    ["A vegetable starter, every meal", "Raw veg and hummus, or sautéed greens, before the main dish."],
+    ["Diverse seeds and nuts", "A mixed jar to sprinkle over meals."],
+    ["Snack on whole foods", "Nuts and seeds instead of packets."],
+    ["Chew properly", "Foods that take effort to eat slow you down."],
+    ["Aim for 30+ plants a week", "Herbs, spices, beans, grains, nuts, seeds, fruit, veg all count."],
+    ["Cook with intent", "Treat each meal as an active choice, not just refuelling."],
+    ["Real food at real mealtimes", "Eat when hungry, not constant grazing."],
+    ["Stay out of the packaged aisle", "Ultra-processed food displaces fibre and empties fast."]
+  ];
+
+  var seasons = ["Spring", "Summer", "Autumn", "Winter"];
+
+  var seasonalProduce = {
+    Spring: {
+      Vegetables: ["asparagus", "broad beans", "peas", "spring onions", "silverbeet", "spinach", "new potatoes", "radishes", "lettuce", "rocket", "broccoli"],
+      Fruit: ["late navel oranges", "tangelos", "rhubarb", "first strawberries (late Nov)"],
+      Herbs: ["mint", "chives", "parsley", "dill"]
+    },
+    Summer: {
+      Vegetables: ["courgette", "tomatoes", "corn", "green beans", "cucumber", "capsicum", "beetroot", "lettuce"],
+      Fruit: ["strawberries", "cherries", "apricots", "peaches", "nectarines", "blueberries", "watermelon", "plums"],
+      Herbs: ["basil", "coriander", "mint"]
+    },
+    Autumn: {
+      Vegetables: ["pumpkin", "kumara", "silverbeet", "leeks", "cauliflower", "brussels sprouts", "mushrooms", "celery"],
+      Fruit: ["apples", "pears", "feijoas", "persimmons", "grapes", "quince"],
+      Herbs: ["sage", "thyme", "rosemary"]
+    },
+    Winter: {
+      Vegetables: ["broccoli", "cabbage", "cauliflower", "kale", "leeks", "swede", "parsnip", "carrots", "silverbeet"],
+      Fruit: ["oranges", "mandarins", "lemons", "grapefruit", "tamarillos"],
+      Herbs: ["rosemary", "thyme", "bay"]
+    }
+  };
+
+  var categories = ["Beans & lentils", "Grain bowls", "Soups", "Fish & eggs", "Vegetable starters", "Snacks", "Pasta & one-pot", "Roasts & traybakes", "Salads"];
+
+  var recipes = [
+    { cat: "Beans & lentils", season: "Winter", title: "Red lentil & silverbeet dahl", desc: "A quick spiced dahl loaded with silverbeet.",
+      ingredients: ["1 cup red lentils, rinsed", "1 onion, diced", "2 cloves garlic, crushed", "1 tbsp curry powder", "1 bunch silverbeet, shredded", "400ml coconut milk"],
+      steps: ["Sauté onion and garlic until soft.", "Add curry powder, lentils, coconut milk and 2 cups water; simmer 20 minutes.", "Stir through silverbeet until wilted.", "Serve with rice or flatbread."] },
+    { cat: "Beans & lentils", season: "Spring", title: "White bean & broad bean stew", desc: "A light spring stew of two beans and fresh herbs.",
+      ingredients: ["2 cans white beans, drained", "1 cup broad beans, podded", "1 leek, sliced", "2 cups vegetable stock", "1 tbsp olive oil", "handful parsley, chopped"],
+      steps: ["Soften leek in olive oil.", "Add stock and white beans; simmer 10 minutes.", "Stir in broad beans for the final 3 minutes.", "Finish with parsley and a squeeze of lemon."] },
+    { cat: "Beans & lentils", season: "Summer", title: "Black bean & sweetcorn tacos", desc: "Smoky black beans and charred corn in soft tacos.",
+      ingredients: ["2 cans black beans, drained", "2 corn cobs, kernels cut off", "1 tsp smoked paprika", "8 small tortillas", "1 avocado, sliced", "lime wedges"],
+      steps: ["Char corn kernels in a hot dry pan.", "Add black beans and paprika; warm through.", "Warm tortillas and fill with the bean mix.", "Top with avocado and a squeeze of lime."] },
+    { cat: "Beans & lentils", season: "Spring", title: "Chickpea & spinach curry", desc: "A fast midweek curry built on pantry chickpeas.",
+      ingredients: ["2 cans chickpeas, drained", "1 onion, diced", "2 tbsp curry paste", "400g tin tomatoes", "200g spinach", "1 cup rice, cooked"],
+      steps: ["Fry onion until soft, then stir in curry paste.", "Add tomatoes and chickpeas; simmer 15 minutes.", "Stir through spinach until wilted.", "Serve over rice."] },
+    { cat: "Beans & lentils", season: "Autumn", title: "Puy lentil & mushroom ragù", desc: "An earthy lentil ragù for pasta or mash.",
+      ingredients: ["1 cup puy lentils", "300g mushrooms, sliced", "1 onion, diced", "2 cloves garlic", "400g tin tomatoes", "1 tsp thyme"],
+      steps: ["Cook lentils in water until just tender; drain.", "Fry onion, garlic and mushrooms until golden.", "Add tomatoes, thyme and lentils; simmer 15 minutes.", "Serve over pasta or mashed potato."] },
+    { cat: "Beans & lentils", season: "Summer", title: "Butter bean & tomato bake", desc: "A one-dish bake of butter beans in a rich tomato sauce.",
+      ingredients: ["2 cans butter beans, drained", "400g tin tomatoes", "1 onion, sliced", "2 cloves garlic", "1 tsp oregano", "feta, crumbled"],
+      steps: ["Combine beans, tomatoes, onion, garlic and oregano in a baking dish.", "Bake at 200°C for 30 minutes.", "Scatter feta over the top before serving.", "Serve with crusty bread."] },
+    { cat: "Beans & lentils", season: "Any", title: "Three-bean chilli", desc: "A hearty chilli that works from any pantry shelf.",
+      ingredients: ["1 can each kidney, black and cannellini beans", "1 onion, diced", "2 tbsp chilli powder", "400g tin tomatoes", "1 capsicum, diced"],
+      steps: ["Fry onion and capsicum until soft.", "Stir in chilli powder, tomatoes and beans.", "Simmer 20 minutes, stirring occasionally.", "Serve with rice or in a wrap."] },
+    { cat: "Beans & lentils", season: "Summer", title: "Moroccan chickpea & apricot stew", desc: "A warmly spiced stew balancing chickpeas and dried apricot.",
+      ingredients: ["2 cans chickpeas, drained", "1/2 cup dried apricots, chopped", "1 onion, diced", "1 tbsp ras el hanout", "400g tin tomatoes", "handful coriander"],
+      steps: ["Fry onion until soft, then add ras el hanout.", "Add tomatoes, chickpeas and apricots; simmer 20 minutes.", "Adjust seasoning to taste.", "Finish with coriander."] },
+
+    { cat: "Grain bowls", season: "Spring", title: "Quinoa spring bowl", desc: "Quinoa topped with the first spring vegetables.",
+      ingredients: ["1 cup quinoa, cooked", "1 cup asparagus, blanched", "1/2 cup peas", "radishes, sliced", "2 tbsp olive oil", "lemon juice"],
+      steps: ["Arrange quinoa in a bowl.", "Top with asparagus, peas and radish.", "Dress with olive oil and lemon juice.", "Season and serve."] },
+    { cat: "Grain bowls", season: "Summer", title: "Bulgur tabbouleh with white beans", desc: "A herb-heavy tabbouleh bulked out with white beans.",
+      ingredients: ["1 cup bulgur, soaked", "1 can white beans, drained", "2 tomatoes, diced", "large bunch parsley, chopped", "lemon juice", "2 tbsp olive oil"],
+      steps: ["Fluff soaked bulgur with a fork.", "Fold through beans, tomato and parsley.", "Dress with lemon juice and olive oil.", "Chill briefly before serving."] },
+    { cat: "Grain bowls", season: "Autumn", title: "Farro & roast pumpkin bowl", desc: "Nutty farro with sweet roasted pumpkin.",
+      ingredients: ["1 cup farro, cooked", "2 cups pumpkin, cubed", "1 tbsp olive oil", "handful walnuts", "feta, crumbled", "rocket"],
+      steps: ["Roast pumpkin with olive oil at 200°C for 25 minutes.", "Combine farro and rocket in a bowl.", "Top with roast pumpkin, walnuts and feta.", "Season to taste."] },
+    { cat: "Grain bowls", season: "Winter", title: "Buckwheat & roasted veg bowl", desc: "Roasted winter roots over hearty buckwheat.",
+      ingredients: ["1 cup buckwheat, cooked", "2 cups carrot and swede, cubed", "1 tbsp olive oil", "handful pumpkin seeds", "tahini", "lemon juice"],
+      steps: ["Roast carrot and swede with olive oil at 200°C for 30 minutes.", "Spoon buckwheat into bowls.", "Top with roast vegetables and pumpkin seeds.", "Drizzle with tahini loosened with lemon juice."] },
+    { cat: "Grain bowls", season: "Summer", title: "Brown rice & edamame bowl", desc: "A simple sesame bowl built for hot evenings.",
+      ingredients: ["1 cup brown rice, cooked", "1 cup edamame, podded", "1 carrot, grated", "1 tbsp sesame oil", "soy sauce", "sesame seeds"],
+      steps: ["Spoon rice into bowls.", "Top with edamame and grated carrot.", "Dress with sesame oil and soy sauce.", "Scatter with sesame seeds."] },
+    { cat: "Grain bowls", season: "Winter", title: "Freekeh & roasted cauliflower bowl", desc: "Smoky roasted cauliflower over chewy freekeh.",
+      ingredients: ["1 cup freekeh, cooked", "1/2 cauliflower, cut into florets", "1 tsp cumin", "2 tbsp olive oil", "yoghurt", "mint"],
+      steps: ["Toss cauliflower with cumin and oil; roast at 220°C for 20 minutes.", "Spoon freekeh into bowls.", "Top with roasted cauliflower.", "Finish with yoghurt and mint."] },
+
+    { cat: "Soups", season: "Any", title: "Minestrone with borlotti beans", desc: "A classic vegetable soup thickened with borlotti beans.",
+      ingredients: ["1 can borlotti beans, drained", "1 onion, diced", "2 carrots, diced", "2 celery stalks, diced", "400g tin tomatoes", "1 cup small pasta"],
+      steps: ["Sauté onion, carrot and celery until soft.", "Add tomatoes, beans and 1L water; simmer 15 minutes.", "Add pasta and cook until tender.", "Season and serve."] },
+    { cat: "Soups", season: "Spring", title: "Spring pea & mint soup", desc: "A bright, quick soup for the first warm weeks.",
+      ingredients: ["3 cups peas, fresh or frozen", "1 onion, diced", "2 cups vegetable stock", "handful mint leaves", "1 tbsp olive oil", "yoghurt to serve"],
+      steps: ["Soften onion in olive oil.", "Add stock and peas; simmer 5 minutes.", "Blend with mint until smooth.", "Serve with a swirl of yoghurt."] },
+    { cat: "Soups", season: "Winter", title: "Red lentil & carrot soup", desc: "A warming, simple soup for cold nights.",
+      ingredients: ["1 cup red lentils", "3 carrots, chopped", "1 onion, diced", "1 tsp cumin", "1L vegetable stock", "lemon juice"],
+      steps: ["Sauté onion and cumin until fragrant.", "Add carrots, lentils and stock; simmer 20 minutes.", "Blend until smooth.", "Finish with a squeeze of lemon."] },
+    { cat: "Soups", season: "Autumn", title: "Kumara & coconut soup", desc: "A silky soup pairing kumara with coconut milk.",
+      ingredients: ["3 kumara, peeled and chopped", "1 onion, diced", "1 tbsp curry powder", "400ml coconut milk", "2 cups vegetable stock", "coriander"],
+      steps: ["Sauté onion and curry powder until fragrant.", "Add kumara, coconut milk and stock; simmer 20 minutes.", "Blend until smooth.", "Top with coriander."] },
+    { cat: "Soups", season: "Winter", title: "Silverbeet & white bean soup", desc: "A simple green soup built on white beans.",
+      ingredients: ["2 cans white beans, drained", "1 bunch silverbeet, shredded", "1 onion, diced", "2 cloves garlic", "1L vegetable stock", "parmesan"],
+      steps: ["Sauté onion and garlic until soft.", "Add stock and beans; simmer 10 minutes, then partly mash.", "Stir through silverbeet until wilted.", "Serve with grated parmesan."] },
+    { cat: "Soups", season: "Summer", title: "Tomato & butter bean soup", desc: "A rich tomato soup made hearty with butter beans.",
+      ingredients: ["800g tin tomatoes", "1 can butter beans, drained", "1 onion, diced", "2 cloves garlic", "1 tsp oregano", "basil to serve"],
+      steps: ["Sauté onion and garlic until soft.", "Add tomatoes, beans and oregano; simmer 15 minutes.", "Blend partially for texture.", "Top with torn basil."] },
+
+    { cat: "Fish & eggs", season: "Any", title: "Baked fish, sautéed greens, lentils", desc: "A simple protein-and-fibre plate for any night.",
+      ingredients: ["2 fish fillets", "1 cup lentils, cooked", "2 cups greens, shredded", "1 tbsp olive oil", "lemon", "garlic"],
+      steps: ["Bake fish at 200°C for 12 minutes.", "Sauté greens and garlic in olive oil.", "Warm the lentils through.", "Plate together with a squeeze of lemon."] },
+    { cat: "Fish & eggs", season: "Any", title: "Veg-loaded frittata", desc: "A flexible frittata for using up whatever vegetables are on hand.",
+      ingredients: ["6 eggs", "2 cups mixed vegetables, chopped", "1 onion, diced", "1/4 cup milk", "feta, crumbled", "herbs"],
+      steps: ["Sauté onion and vegetables until soft.", "Whisk eggs with milk and pour over the vegetables.", "Cook gently until mostly set, then scatter feta.", "Finish under the grill until set."] },
+    { cat: "Fish & eggs", season: "Winter", title: "Salmon, broccoli & farro tray", desc: "A tray bake pairing salmon with winter broccoli.",
+      ingredients: ["2 salmon fillets", "2 cups broccoli florets", "1 cup farro, cooked", "1 tbsp olive oil", "lemon", "garlic"],
+      steps: ["Toss broccoli with oil and garlic on a tray.", "Roast at 200°C for 10 minutes, then add salmon.", "Roast a further 10 minutes until cooked through.", "Serve over farro with lemon."] },
+    { cat: "Fish & eggs", season: "Summer", title: "Shakshuka with chickpeas", desc: "Eggs poached in a spiced tomato sauce with chickpeas.",
+      ingredients: ["6 eggs", "1 can chickpeas, drained", "800g tin tomatoes", "1 onion, diced", "1 tsp cumin", "1 tsp paprika"],
+      steps: ["Sauté onion with cumin and paprika.", "Add tomatoes and chickpeas; simmer 10 minutes.", "Make wells and crack in the eggs.", "Cover and cook until eggs are just set."] },
+    { cat: "Fish & eggs", season: "Spring", title: "Tuna, white bean & rocket salad", desc: "A quick pantry salad with fresh spring rocket.",
+      ingredients: ["2 cans tuna, drained", "1 can white beans, drained", "2 cups rocket", "1/2 red onion, sliced thin", "olive oil", "lemon juice"],
+      steps: ["Combine tuna, beans, onion and rocket in a bowl.", "Dress with olive oil and lemon juice.", "Toss gently to combine.", "Season and serve."] },
+    { cat: "Fish & eggs", season: "Any", title: "Miso-baked fish with brown rice & greens", desc: "A savoury miso glaze on baked fish, served with rice.",
+      ingredients: ["2 fish fillets", "2 tbsp miso paste", "1 tbsp honey", "1 cup brown rice, cooked", "2 cups greens, steamed", "sesame seeds"],
+      steps: ["Mix miso and honey and spread over fish.", "Bake at 200°C for 12 minutes.", "Steam the greens until just tender.", "Serve fish over rice and greens, scattered with sesame seeds."] },
+
+    { cat: "Vegetable starters", season: "Any", title: "Raw veg + hummus plate", desc: "The simplest possible plant-forward starter.",
+      ingredients: ["hummus", "carrot sticks", "cucumber sticks", "capsicum strips", "snap peas", "olive oil"],
+      steps: ["Spread hummus over a plate.", "Arrange raw vegetables around it.", "Drizzle with olive oil.", "Serve immediately."] },
+    { cat: "Vegetable starters", season: "Winter", title: "Olive-oil sautéed greens", desc: "A fast, simple way to get greens onto the plate.",
+      ingredients: ["2 bunches seasonal greens", "2 cloves garlic, sliced", "2 tbsp olive oil", "chilli flakes", "lemon juice"],
+      steps: ["Warm olive oil and garlic in a pan.", "Add greens and cook until wilted.", "Season with chilli flakes.", "Finish with lemon juice."] },
+    { cat: "Vegetable starters", season: "Spring", title: "Roasted asparagus with lemon", desc: "A five-minute spring classic.",
+      ingredients: ["1 bunch asparagus", "1 tbsp olive oil", "1 lemon", "parmesan shavings", "black pepper"],
+      steps: ["Toss asparagus with olive oil.", "Roast at 220°C for 8 minutes.", "Squeeze lemon over the top.", "Finish with parmesan shavings."] },
+    { cat: "Vegetable starters", season: "Winter", title: "Charred broccoli with tahini", desc: "Blackened broccoli against a creamy tahini sauce.",
+      ingredients: ["1 head broccoli, cut into florets", "2 tbsp olive oil", "2 tbsp tahini", "lemon juice", "garlic", "sesame seeds"],
+      steps: ["Char broccoli in a hot dry pan or under the grill.", "Whisk tahini with lemon juice, garlic and water.", "Spoon sauce over the broccoli.", "Scatter with sesame seeds."] },
+    { cat: "Vegetable starters", season: "Autumn", title: "Beetroot & walnut small plate", desc: "An earthy small plate for the start of a meal.",
+      ingredients: ["3 beetroot, roasted and sliced", "handful walnuts, toasted", "soft cheese", "olive oil", "balsamic vinegar"],
+      steps: ["Arrange beetroot slices on a plate.", "Scatter with walnuts and soft cheese.", "Drizzle with olive oil and balsamic.", "Serve at room temperature."] },
+
+    { cat: "Snacks", season: "Any", title: "Seed and nut mix jar", desc: "A jar of mixed seeds and nuts to sprinkle or snack on.",
+      ingredients: ["pumpkin seeds", "sunflower seeds", "almonds", "walnuts", "dried cranberries"],
+      steps: ["Combine all ingredients in a jar.", "Shake to mix.", "Store in a cool, dry place.", "Sprinkle over meals or eat by the handful."] },
+    { cat: "Snacks", season: "Any", title: "Roasted chickpeas", desc: "A crunchy, salty snack straight from a tin of chickpeas.",
+      ingredients: ["2 cans chickpeas, drained and dried", "2 tbsp olive oil", "1 tsp paprika", "salt"],
+      steps: ["Toss chickpeas with oil, paprika and salt.", "Spread on a tray.", "Roast at 200°C for 30 minutes, shaking halfway.", "Cool before serving."] },
+    { cat: "Snacks", season: "Autumn", title: "Apple & seed butter plate", desc: "A simple sliced-apple snack with seed butter.",
+      ingredients: ["2 apples, sliced", "2 tbsp seed butter", "cinnamon", "pumpkin seeds"],
+      steps: ["Arrange apple slices on a plate.", "Spoon seed butter alongside for dipping.", "Dust with cinnamon.", "Scatter with pumpkin seeds."] },
+    { cat: "Snacks", season: "Any", title: "Hummus & veg sticks", desc: "A grab-and-go plant snack.",
+      ingredients: ["hummus", "carrot sticks", "celery sticks", "cucumber sticks"],
+      steps: ["Spoon hummus into a small container.", "Cut vegetables into sticks.", "Pack together.", "Eat within the day."] },
+    { cat: "Snacks", season: "Any", title: "Homemade seed & oat bars", desc: "Nut-free bars that travel well, including in a school bag.",
+      ingredients: ["2 cups rolled oats", "1/2 cup mixed seeds", "1/3 cup honey", "1/4 cup melted butter", "pinch salt"],
+      steps: ["Mix oats, seeds and salt in a bowl.", "Stir through melted honey and butter.", "Press into a lined tin.", "Bake at 160°C for 20 minutes, then cool and cut into bars."] },
+
+    { cat: "Pasta & one-pot", season: "Winter", title: "Wholegrain pasta with white beans & greens", desc: "A store-cupboard pasta dressed up with greens.",
+      ingredients: ["300g wholegrain pasta", "1 can white beans, drained", "2 cups greens, shredded", "2 cloves garlic", "olive oil", "parmesan"],
+      steps: ["Cook pasta according to packet instructions.", "Sauté garlic and greens in olive oil.", "Toss through pasta and beans, with a splash of pasta water.", "Finish with parmesan."] },
+    { cat: "Pasta & one-pot", season: "Any", title: "Lentil bolognese", desc: "A meat-free bolognese built on green lentils.",
+      ingredients: ["1 cup green lentils, cooked", "1 onion, diced", "2 carrots, diced", "800g tin tomatoes", "1 tsp oregano", "pasta to serve"],
+      steps: ["Sauté onion and carrot until soft.", "Add tomatoes, oregano and lentils; simmer 20 minutes.", "Cook pasta according to packet instructions.", "Serve the sauce over pasta."] },
+    { cat: "Pasta & one-pot", season: "Any", title: "One-pot chickpea & orzo stew", desc: "A single-pot stew that thickens as the orzo cooks.",
+      ingredients: ["2 cans chickpeas, drained", "1 cup orzo", "800g tin tomatoes", "1 onion, diced", "2 cloves garlic", "spinach"],
+      steps: ["Sauté onion and garlic until soft.", "Add tomatoes, chickpeas and 3 cups water; bring to a simmer.", "Stir in orzo and cook until tender.", "Stir through spinach to wilt."] },
+    { cat: "Pasta & one-pot", season: "Autumn", title: "Pearl barley & mushroom risotto-style", desc: "A creamy, stirred barley dish standing in for risotto.",
+      ingredients: ["1 cup pearl barley", "300g mushrooms, sliced", "1 onion, diced", "1L vegetable stock", "parmesan", "thyme"],
+      steps: ["Sauté onion and mushrooms until golden.", "Add barley and a ladle of stock, stirring until absorbed.", "Continue adding stock gradually until barley is tender.", "Finish with parmesan and thyme."] },
+    { cat: "Pasta & one-pot", season: "Spring", title: "Wholewheat pasta primavera", desc: "A light pasta tossed with the first spring vegetables.",
+      ingredients: ["300g wholewheat pasta", "1 cup asparagus, chopped", "1 cup peas", "2 tbsp olive oil", "parmesan", "lemon zest"],
+      steps: ["Cook pasta, adding asparagus and peas for the final 3 minutes.", "Drain, reserving a little pasta water.", "Toss with olive oil and reserved water.", "Finish with parmesan and lemon zest."] },
+    { cat: "Pasta & one-pot", season: "Summer", title: "Soba noodles with edamame & sesame", desc: "A cold noodle salad for hot evenings.",
+      ingredients: ["200g soba noodles", "1 cup edamame, podded", "1 carrot, julienned", "2 tbsp soy sauce", "1 tbsp sesame oil", "sesame seeds"],
+      steps: ["Cook soba noodles and rinse under cold water.", "Toss with edamame and carrot.", "Dress with soy sauce and sesame oil.", "Scatter with sesame seeds and chill before serving."] },
+
+    { cat: "Roasts & traybakes", season: "Any", title: "Chickpea & roast veg tray bake", desc: "A one-tray dinner for a low-effort night.",
+      ingredients: ["2 cans chickpeas, drained", "3 cups mixed vegetables, chopped", "2 tbsp olive oil", "1 tsp cumin", "lemon"],
+      steps: ["Toss chickpeas and vegetables with oil and cumin.", "Spread on a tray.", "Roast at 200°C for 30 minutes.", "Finish with a squeeze of lemon."] },
+    { cat: "Roasts & traybakes", season: "Autumn", title: "Roast kumara, broccoli & lentil traybake", desc: "Sweet kumara and broccoli roasted over green lentils.",
+      ingredients: ["2 kumara, cubed", "2 cups broccoli florets", "1 cup lentils, cooked", "2 tbsp olive oil", "1 tsp smoked paprika"],
+      steps: ["Toss kumara and broccoli with oil and paprika.", "Roast at 200°C for 25 minutes.", "Warm lentils through.", "Serve vegetables over the lentils."] },
+    { cat: "Roasts & traybakes", season: "Winter", title: "Whole roast cauliflower with tahini", desc: "A whole cauliflower roasted until tender, dressed with tahini.",
+      ingredients: ["1 whole cauliflower", "2 tbsp olive oil", "1 tsp cumin", "2 tbsp tahini", "lemon juice", "pomegranate seeds"],
+      steps: ["Rub the whole cauliflower with oil and cumin.", "Roast at 200°C for 45 minutes until tender.", "Whisk tahini with lemon juice and water.", "Drizzle over the cauliflower and scatter with pomegranate seeds."] },
+    { cat: "Roasts & traybakes", season: "Any", title: "Roast veg & haloumi traybake with chickpeas", desc: "Salty haloumi against sweet roasted vegetables.",
+      ingredients: ["3 cups mixed vegetables, chopped", "1 can chickpeas, drained", "200g haloumi, sliced", "2 tbsp olive oil", "1 tsp oregano"],
+      steps: ["Toss vegetables and chickpeas with oil and oregano.", "Roast at 200°C for 25 minutes.", "Add haloumi slices for the final 10 minutes.", "Serve straight from the tray."] },
+    { cat: "Roasts & traybakes", season: "Summer", title: "Baked stuffed capsicums", desc: "Summer capsicums stuffed with a grain and bean filling.",
+      ingredients: ["4 capsicums, halved and deseeded", "1 cup rice, cooked", "1 can black beans, drained", "1 cup corn kernels", "1 tsp cumin", "cheese, grated"],
+      steps: ["Mix rice, beans, corn and cumin.", "Spoon into capsicum halves.", "Top with cheese.", "Bake at 190°C for 30 minutes."] },
+
+    { cat: "Salads", season: "Any", title: "Lentil & roasted veg salad", desc: "A substantial salad built on lentils and roast vegetables.",
+      ingredients: ["1 cup lentils, cooked", "2 cups roasted vegetables", "handful rocket", "2 tbsp olive oil", "balsamic vinegar"],
+      steps: ["Roast vegetables until tender.", "Combine lentils, rocket and roasted vegetables.", "Dress with olive oil and balsamic.", "Toss and serve."] },
+    { cat: "Salads", season: "Spring", title: "Broad bean, pea & feta salad", desc: "A green, fresh salad for the first weeks of spring.",
+      ingredients: ["1 cup broad beans, podded", "1 cup peas", "feta, crumbled", "mint leaves", "olive oil", "lemon juice"],
+      steps: ["Blanch broad beans and peas briefly.", "Combine with feta and mint.", "Dress with olive oil and lemon juice.", "Toss gently and serve."] },
+    { cat: "Salads", season: "Summer", title: "Chickpea, cucumber & herb salad", desc: "A crisp, herby salad for hot days.",
+      ingredients: ["2 cans chickpeas, drained", "1 cucumber, diced", "large bunch herbs, chopped", "2 tbsp olive oil", "lemon juice", "feta"],
+      steps: ["Combine chickpeas, cucumber and herbs.", "Dress with olive oil and lemon juice.", "Crumble feta over the top.", "Toss and serve."] },
+    { cat: "Salads", season: "Winter", title: "Kale & white bean caesar-style salad", desc: "A hearty winter salad standing in for caesar.",
+      ingredients: ["1 bunch kale, shredded", "1 can white beans, drained", "parmesan, shaved", "2 tbsp olive oil", "1 tbsp lemon juice", "1 tsp dijon mustard"],
+      steps: ["Massage kale with a little olive oil to soften.", "Whisk remaining olive oil, lemon juice and mustard.", "Toss kale with beans and dressing.", "Top with shaved parmesan."] },
+    { cat: "Salads", season: "Autumn", title: "Beetroot, orange & walnut salad", desc: "A classic pairing of sweet beetroot and citrus.",
+      ingredients: ["3 beetroot, roasted and sliced", "2 oranges, segmented", "handful walnuts, toasted", "soft cheese", "olive oil"],
+      steps: ["Arrange beetroot and orange segments on a plate.", "Scatter with walnuts and soft cheese.", "Drizzle with olive oil.", "Serve at room temperature."] }
+  ];
+  recipes.forEach(function (r, i) { r.id = i; });
+
+  var lunchboxGroups = [
+    { name: "Whole grain base", items: ["Seeded sourdough sandwich", "Wholegrain wrap", "Leftover quinoa", "Bulgur salad", "Oat crackers"] },
+    { name: "Protein & fibre", items: ["Hummus", "Boiled egg", "Roasted chickpeas", "Leftover lentil dahl", "Cheese cubes"] },
+    { name: "Vegetables", items: ["Carrot sticks", "Cucumber rounds", "Cherry tomatoes", "Snap peas", "Capsicum strips"] },
+    { name: "Fruit", items: ["Apple slices", "Mandarin", "Grapes", "Rhubarb & yoghurt pot", "Kiwifruit"] },
+    { name: "Seeds (nut-free friendly)", items: ["Pumpkin seed mix", "Sunflower seed mix", "Roasted chickpeas (salted)", "Homemade seed & oat bar"] }
+  ];
+
+  var days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  var dayNames = { Mon: "Monday", Tue: "Tuesday", Wed: "Wednesday", Thu: "Thursday", Fri: "Friday", Sat: "Saturday", Sun: "Sunday" };
+
+  /* ---------- storage helpers ---------- */
+
+  function loadJSON(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      if (!raw) return fallback;
+      var parsed = JSON.parse(raw);
+      return parsed == null ? fallback : parsed;
+    } catch (e) {
+      return fallback;
+    }
+  }
+  function saveJSON(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) { /* ignore write failures, e.g. private browsing */ }
+  }
+
+  /* ---------- toast ---------- */
+
+  var toastEl = document.getElementById("toast");
+  var toastToken = 0;
+  function showToast(msg) {
+    toastToken++;
+    var myToken = toastToken;
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    setTimeout(function () {
+      if (myToken === toastToken) toastEl.classList.remove("show");
+    }, 2000);
+  }
+
+  /* ---------- theme toggle ---------- */
+
+  var themeBtn = document.getElementById("themeToggle");
+  var themeOrder = ["auto", "light", "dark"];
+  var theme = loadJSON("springtable_theme", "auto");
+  function applyTheme() {
+    if (theme === "auto") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", theme);
+    themeBtn.textContent = "Theme: " + theme.charAt(0).toUpperCase() + theme.slice(1);
+  }
+  themeBtn.addEventListener("click", function () {
+    theme = themeOrder[(themeOrder.indexOf(theme) + 1) % themeOrder.length];
+    saveJSON("springtable_theme", theme);
+    applyTheme();
+  });
+  applyTheme();
+
+  /* ---------- tabs ---------- */
+
+  var tabButtons = document.querySelectorAll("nav.tabs button");
+  tabButtons.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      tabButtons.forEach(function (b) { b.setAttribute("aria-selected", "false"); });
+      btn.setAttribute("aria-selected", "true");
+      document.querySelectorAll(".panel").forEach(function (p) { p.classList.remove("active"); });
+      document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+    });
+  });
+
+  /* ---------- current season ---------- */
+
+  function getCurrentSeason() {
+    var m = new Date().getMonth(); // 0 = Jan
+    if (m >= 8 && m <= 10) return "Spring";
+    if (m === 11 || m <= 1) return "Summer";
+    if (m >= 2 && m <= 4) return "Autumn";
+    return "Winter";
+  }
+  var currentSeason = getCurrentSeason();
+
+  /* ---------- principles ---------- */
+
+  var principleList = document.getElementById("principleList");
+  principleList.innerHTML = principles.map(function (p, i) {
+    var num = String(i + 1).padStart(2, "0");
+    return '<li><span class="pnum">' + num + '</span><span><span class="ptitle">' + p[0] + '</span> — ' + p[1] + '</span></li>';
+  }).join("");
+
+  /* ---------- seasonal tab ---------- */
+
+  var selectedSeasonalSeason = currentSeason;
+  var seasonPicker = document.getElementById("seasonPicker");
+  var seasonalContent = document.getElementById("seasonalContent");
+
+  function renderSeasonPicker() {
+    seasonPicker.innerHTML = seasons.map(function (s) {
+      var label = s + (s === currentSeason ? " · now" : "");
+      return '<button class="pill" data-season="' + s + '" aria-pressed="' + (s === selectedSeasonalSeason) + '">' + label + '</button>';
+    }).join("");
+  }
+  function renderSeasonalContent() {
+    var data = seasonalProduce[selectedSeasonalSeason];
+    seasonalContent.innerHTML = ["Vegetables", "Fruit", "Herbs"].map(function (group) {
+      return '<h3 class="groupname">' + group + '</h3><div class="pillrow">' +
+        data[group].map(function (item) { return '<span class="pill static">' + item + '</span>'; }).join("") +
+        '</div>';
+    }).join("");
+  }
+  seasonPicker.addEventListener("click", function (e) {
+    var btn = e.target.closest("button[data-season]");
+    if (!btn) return;
+    selectedSeasonalSeason = btn.dataset.season;
+    renderSeasonPicker();
+    renderSeasonalContent();
+  });
+  renderSeasonPicker();
+  renderSeasonalContent();
+
+  /* ---------- ideas tab ---------- */
+
+  var selectedCat = "All";
+  var selectedIdeaSeason = "All";
+  var expanded = {};
+
+  var catFilter = document.getElementById("catFilter");
+  var seasonFilter = document.getElementById("seasonFilter");
+  var ideaCount = document.getElementById("ideaCount");
+  var ideaList = document.getElementById("ideaList");
+
+  function renderCatFilter() {
+    var all = ["All"].concat(categories);
+    catFilter.innerHTML = all.map(function (c) {
+      return '<button class="pill" data-cat="' + c + '" aria-pressed="' + (c === selectedCat) + '">' + c + '</button>';
+    }).join("");
+  }
+  function renderSeasonFilter() {
+    var all = ["All"].concat(seasons);
+    seasonFilter.innerHTML = all.map(function (s) {
+      var label = s + (s === currentSeason ? " · now" : "");
+      return '<button class="pill" data-season="' + s + '" aria-pressed="' + (s === selectedIdeaSeason) + '">' + label + '</button>';
+    }).join("");
+  }
+
+  function filteredRecipes() {
+    return recipes.filter(function (r) {
+      var catOk = selectedCat === "All" || r.cat === selectedCat;
+      var seasonOk = selectedIdeaSeason === "All" || r.season === selectedIdeaSeason || r.season === "Any";
+      return catOk && seasonOk;
+    });
+  }
+
+  function renderIdeas() {
+    var list = filteredRecipes();
+    ideaCount.textContent = list.length + (list.length === 1 ? " idea" : " ideas");
+    ideaList.innerHTML = list.map(function (r) {
+      var isExpanded = !!expanded[r.id];
+      var seasonLabel = r.season === "Any" ? "Any season" : r.season;
+      return (
+        '<div class="idea-card' + (isExpanded ? " expanded" : "") + '" data-id="' + r.id + '">' +
+          '<button class="idea-header" type="button" aria-expanded="' + isExpanded + '">' +
+            '<span class="idea-main">' +
+              '<p class="idea-title">' + r.title + '</p>' +
+              '<p class="idea-desc">' + r.desc + '</p>' +
+              '<span class="idea-tags"><span class="pill tag-cat">' + r.cat + '</span><span class="pill tag-season">' + seasonLabel + '</span></span>' +
+            '</span>' +
+            '<span class="chevron" aria-hidden="true">&#9662;</span>' +
+          '</button>' +
+          '<div class="idea-body">' +
+            '<div class="idea-cols">' +
+              '<div><h4>Ingredients</h4><ul>' + r.ingredients.map(function (i) { return "<li>" + i + "</li>"; }).join("") + '</ul></div>' +
+              '<div><h4>Method</h4><ol>' + r.steps.map(function (s) { return "<li>" + s + "</li>"; }).join("") + '</ol></div>' +
+            '</div>' +
+            '<button class="btn add-planner-btn" type="button" data-add="' + r.id + '">+ Add to planner</button>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join("");
+  }
+
+  catFilter.addEventListener("click", function (e) {
+    var btn = e.target.closest("button[data-cat]");
+    if (!btn) return;
+    selectedCat = btn.dataset.cat;
+    renderCatFilter();
+    renderIdeas();
+  });
+  seasonFilter.addEventListener("click", function (e) {
+    var btn = e.target.closest("button[data-season]");
+    if (!btn) return;
+    selectedIdeaSeason = btn.dataset.season;
+    renderSeasonFilter();
+    renderIdeas();
+  });
+  ideaList.addEventListener("click", function (e) {
+    var addBtn = e.target.closest("button[data-add]");
+    if (addBtn) {
+      e.stopPropagation();
+      var recipe = recipes[Number(addBtn.dataset.add)];
+      addRecipeToPlanner(recipe.title);
+      return;
+    }
+    var card = e.target.closest(".idea-card");
+    if (!card) return;
+    var id = Number(card.dataset.id);
+    expanded[id] = !expanded[id];
+    renderIdeas();
+  });
+
+  renderCatFilter();
+  renderSeasonFilter();
+  renderIdeas();
+
+  /* ---------- lunchbox tab ---------- */
+
+  var box = loadJSON("springtable_box", []);
+  var boxList = document.getElementById("boxList");
+  var componentPicker = document.getElementById("componentPicker");
+
+  function saveBox() { saveJSON("springtable_box", box); }
+
+  function renderBox() {
+    if (box.length === 0) {
+      boxList.innerHTML = '<li class="box-empty" style="background:none;border:none;padding:4px 0;">Nothing in the box yet — add something from the right.</li>';
+      return;
+    }
+    boxList.innerHTML = box.map(function (item, i) {
+      return '<li><span>' + item + '</span><button class="remove" type="button" data-remove="' + i + '" aria-label="Remove ' + item + '">&#10005;</button></li>';
+    }).join("");
+  }
+
+  function renderComponentPicker() {
+    componentPicker.innerHTML = lunchboxGroups.map(function (g) {
+      return '<h3 class="groupname">' + g.name + '</h3><div class="pillrow">' +
+        g.items.map(function (item) { return '<button class="pill" type="button" data-item="' + item + '">' + item + '</button>'; }).join("") +
+        '</div>';
+    }).join("");
+  }
+
+  boxList.addEventListener("click", function (e) {
+    var btn = e.target.closest("button[data-remove]");
+    if (!btn) return;
+    box.splice(Number(btn.dataset.remove), 1);
+    saveBox();
+    renderBox();
+  });
+  componentPicker.addEventListener("click", function (e) {
+    var btn = e.target.closest("button[data-item]");
+    if (!btn) return;
+    box.push(btn.dataset.item);
+    saveBox();
+    renderBox();
+  });
+  document.getElementById("clearBoxBtn").addEventListener("click", function () {
+    box = [];
+    saveBox();
+    renderBox();
+  });
+  document.getElementById("surpriseBtn").addEventListener("click", function () {
+    box = lunchboxGroups.map(function (g) { return g.items[Math.floor(Math.random() * g.items.length)]; });
+    saveBox();
+    renderBox();
+  });
+
+  renderComponentPicker();
+  renderBox();
+
+  /* ---------- weekly planner ---------- */
+
+  var plan = loadJSON("springtable_plan", {});
+  var plannerTable = document.getElementById("plannerTable");
+  var plannerStatus = document.getElementById("plannerStatus");
+  var plannerStatusToken = 0;
+
+  function setPlannerStatus(msg) {
+    plannerStatusToken++;
+    var myToken = plannerStatusToken;
+    plannerStatus.textContent = msg;
+    setTimeout(function () {
+      if (myToken === plannerStatusToken) plannerStatus.textContent = "";
+    }, 2000);
+  }
+
+  function savePlan() { saveJSON("springtable_plan", plan); }
+
+  function renderPlanner() {
+    var head = "<tr><th scope=\"col\">&nbsp;</th>" + days.map(function (d) { return "<th scope=\"col\">" + dayNames[d] + "</th>"; }).join("") + "</tr>";
+    var rows = [["dinner", "Dinner"], ["kidlunch", "Kid's lunch"]].map(function (rowDef) {
+      var key = rowDef[0], label = rowDef[1];
+      var cells = days.map(function (d) {
+        var value = plan[key + "_" + d] || "";
+        var ariaLabel = dayNames[d] + " " + label.toLowerCase();
+        return '<td><textarea data-key="' + key + '_' + d + '" aria-label="' + ariaLabel + '" placeholder="' + label + '&hellip;">' + value + '</textarea></td>';
+      }).join("");
+      return '<tr><td class="rowlabel">' + label + '</td>' + cells + '</tr>';
+    }).join("");
+    plannerTable.innerHTML = head + rows;
+  }
+
+  plannerTable.addEventListener("input", function (e) {
+    var ta = e.target.closest("textarea[data-key]");
+    if (!ta) return;
+    plan[ta.dataset.key] = ta.value;
+    savePlan();
+    setPlannerStatus("Saved");
+  });
+
+  document.getElementById("fillDinnersBtn").addEventListener("click", function () {
+    var shuffled = recipes.slice().sort(function () { return Math.random() - 0.5; });
+    var idx = 0, filled = 0;
+    days.forEach(function (d) {
+      var key = "dinner_" + d;
+      if (!plan[key] && idx < shuffled.length) {
+        plan[key] = shuffled[idx].title;
+        idx++;
+        filled++;
+      }
+    });
+    savePlan();
+    renderPlanner();
+    setPlannerStatus(filled > 0 ? "Filled " + filled + " empty dinner" + (filled === 1 ? "" : "s") + "." : "No empty dinner slots to fill.");
+  });
+
+  document.getElementById("clearWeekBtn").addEventListener("click", function () {
+    if (!window.confirm("Clear the whole week's planner?")) return;
+    plan = {};
+    savePlan();
+    renderPlanner();
+    setPlannerStatus("Week cleared.");
+  });
+
+  function addRecipeToPlanner(title) {
+    for (var i = 0; i < days.length; i++) {
+      var key = "dinner_" + days[i];
+      if (!plan[key]) {
+        plan[key] = title;
+        savePlan();
+        renderPlanner();
+        showToast("Added to " + dayNames[days[i]] + "'s dinner.");
+        return;
+      }
+    }
+    showToast("This week's dinners are already full.");
+  }
+
+  renderPlanner();
+})();
+</script>
+</body>
+</html>
